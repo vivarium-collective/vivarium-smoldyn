@@ -20,17 +20,24 @@ NAME = 'smoldyn'
 class SmoldynProcess(Process):
 
     name = NAME
-    defaults = {}
+    defaults = {
+        'animate': False,
+        'time_step': 10,
+        'dt': 0.1,
+    }
 
     def __init__(self, parameters=None):
         super(SmoldynProcess, self).__init__(parameters)
 
-        self.dt = 0.1
+        self.dt = self.parameters['dt']
 
+        # initialize the simulation
         self.smoldyn = sm.Simulation(
             low=[0, 0],
             high=[10, 10],
-            types="p")
+            types="p",
+            # quit_at_end=True,
+        )
 
         # species X A B A2 B2
         X = self.smoldyn.addSpecies("X", difc=0, color="green", display_size=3)
@@ -51,6 +58,8 @@ class SmoldynProcess(Process):
         Bdegrade = self.smoldyn.addReaction("Bdegrade", subs=[B], prds=[], rate=0.01)
 
         # self.smoldyn.addCommand("molcount bistableout.txt", cmd_type="N", step=10)
+        if self.parameters['animate']:
+            self.smoldyn.addGraphics("opengl")
 
     def ports_schema(self):
         return {
@@ -63,12 +72,12 @@ class SmoldynProcess(Process):
             },
         }
 
-    def next_update(self, timestep, states):
-
+    def next_update(
+            self,
+            timestep,
+            states
+    ):
         results = self.run(timestep)
-
-
-
         return {}
 
     def run(
@@ -76,20 +85,25 @@ class SmoldynProcess(Process):
             time
     ):
         self.smoldyn.run(
-            time,
+            stop=time,
             dt=self.dt)
 
         import ipdb;
         ipdb.set_trace()
 
+        return {}
+
 # functions to configure and run the process
-def run_template_process():
+def run_template_process(
+        animate=False
+):
 
     # initialize the process by passing in parameters
-    parameters = {}
+    parameters = {
+        'animate': animate}
     template_process = SmoldynProcess(parameters)
 
-    # declare the initial state, mirroring the ports structure
+    # declare the initial state
     initial_state = {
         'internal': {
             'A': 0.0
@@ -101,9 +115,11 @@ def run_template_process():
 
     # run the simulation
     sim_settings = {
-        'total_time': 10,
+        'total_time': 1000,
         'initial_state': initial_state}
-    output = simulate_process_in_experiment(template_process, sim_settings)
+    output = simulate_process_in_experiment(
+        template_process,
+        sim_settings)
 
     return output
 
@@ -121,9 +137,11 @@ def main():
 
     # plot the simulation output
     plot_settings = {}
-    plot_simulation_output(output, plot_settings, out_dir)
+    plot_simulation_output(
+        output,
+        plot_settings,
+        out_dir)
 
 
-# run module with python vivarium_smoldyn/process/colloidal.py
 if __name__ == '__main__':
     main()
