@@ -67,18 +67,23 @@ class SmoldynProcess(Process):
                 **config
             )
 
+        # TODO -- configure surfaces
+
         if self.parameters['animate']:
             self.smoldyn.addGraphics("opengl")
 
     def ports_schema(self):
         return {
-            'internal': {
-                'A': {
-                    '_default': 1.0,
+            # TODO -- molecules have counts OR locations. make this optional
+            'molecules': {
+                mol_id: {
+                    '_default': 1,
                     '_updater': 'accumulate',
                     '_emit': True,
-                },
+                } for mol_id in self.parameters['species'].keys(),
             },
+            # TODO -- effective rates (as a result of crowding) could be optional
+            'effective_rates': {}
         }
 
     def next_update(
@@ -86,6 +91,9 @@ class SmoldynProcess(Process):
             timestep,
             states
     ):
+
+        # TODO: take the state, and use it to configure smoldyn
+
         self.smoldyn.run(
             stop=timestep,
             dt=self.dt)
@@ -96,7 +104,12 @@ class SmoldynProcess(Process):
         import ipdb;
         ipdb.set_trace()
 
-        return {}
+        # TODO -- post processing to get effective rates
+
+        return {
+            'molecules': {},
+            'effective_rates': {},
+        }
 
 
 # functions to configure and run the process
