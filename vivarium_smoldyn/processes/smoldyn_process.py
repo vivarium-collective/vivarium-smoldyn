@@ -1,6 +1,6 @@
-'''
-Execute by running: ``python vivarium_smoldyn/process/smoldyn_process.py``
-'''
+"""
+Execute by running: ``python vivarium_smoldyn/processes/smoldyn_process.py``
+"""
 
 import os
 
@@ -8,18 +8,14 @@ import smoldyn as sm
 
 from vivarium.core.process import Process
 from vivarium.core.composition import (
-    simulate_process_in_experiment,
+    simulate_process,
     PROCESS_OUT_DIR,
 )
 from vivarium.plots.simulation_output import plot_simulation_output
 
 
-NAME = 'smoldyn'
-
-
 class SmoldynProcess(Process):
 
-    name = NAME
     defaults = {
         'animate': False,
         'time_step': 10,
@@ -27,7 +23,7 @@ class SmoldynProcess(Process):
     }
 
     def __init__(self, parameters=None):
-        super(SmoldynProcess, self).__init__(parameters)
+        super().__init__(parameters)
 
         self.dt = self.parameters['dt']
 
@@ -94,7 +90,7 @@ class SmoldynProcess(Process):
         return {}
 
 # functions to configure and run the process
-def run_template_process(
+def run_smoldyn_process(
         animate=False
 ):
 
@@ -117,7 +113,7 @@ def run_template_process(
     sim_settings = {
         'total_time': 1000,
         'initial_state': initial_state}
-    output = simulate_process_in_experiment(
+    output = simulate_process(
         template_process,
         sim_settings)
 
@@ -125,15 +121,15 @@ def run_template_process(
 
 
 def test_template_process():
-    output = run_template_process()
+    output = run_smoldyn_process()
     # TODO: Add assert statements to ensure correct performance.
 
 
 def main():
-    out_dir = os.path.join(PROCESS_OUT_DIR, NAME)
+    out_dir = os.path.join(PROCESS_OUT_DIR, 'smoldyn')
     os.makedirs(out_dir, exist_ok=True)
 
-    output = run_template_process()
+    output = run_smoldyn_process()
 
     # plot the simulation output
     plot_settings = {}
