@@ -44,15 +44,11 @@ class SmoldynProcess(Process):
         # make the species
         self.species = {}
         for name, config in self.parameters['species'].items():
-            solution = None
-            if 'solution' in config:
-                solution = config.pop('solution')
+            print('species ' + name)
             self.species[name] = self.smoldyn.addSpecies(name, **config)
-            if solution:
-                self.species[name].addToSolution(
-                    solution.get('counts'),
-                    pos=solution.get('position')
-            )
+            # self.set_species(name, dict(config, {
+            #     'high': self.parameters['high'],
+            #     'low': self.parameters['low']}))
 
         self.reactions = {}
         for rxn_name, config in self.parameters['reactions'].items():
@@ -72,15 +68,26 @@ class SmoldynProcess(Process):
         if self.parameters['animate']:
             self.smoldyn.addGraphics("opengl")
 
+    def set_species(self, name, config):
+        self.smoldyn.runCommand(f"killmol {name}")
+        self.species[name].addToSolution(
+            config.get('counts'),
+            highpos=config.get('high'),
+            lowpos=config.get('low'))
+
+    def set_state(self, state):
+        for name, config in state.items():
+            self.set_species(name, config)
+
     def ports_schema(self):
         return {
             # TODO -- molecules have counts OR locations. make this optional
             'molecules': {
                 mol_id: {
-                    '_default': 1,
+                    '_default': 0,
                     '_updater': 'accumulate',
                     '_emit': True,
-                } for mol_id in self.parameters['species'].keys(),
+                } for mol_id in self.parameters['species'].keys()
             },
             # TODO -- effective rates (as a result of crowding) could be optional
             'effective_rates': {}
@@ -94,6 +101,15 @@ class SmoldynProcess(Process):
 
         # TODO: take the state, and use it to configure smoldyn
 
+        for name, counts in states['molecules'].items():
+            self.set_species(
+                name, {
+                    'counts': counts,
+                    'high': self.parameters['high'],
+                    'low': self.parameters['low']
+                }
+            )
+
         self.smoldyn.run(
             stop=timestep,
             dt=self.dt)
@@ -101,13 +117,17 @@ class SmoldynProcess(Process):
         # get the data, clear the buffer
         data = self.smoldyn.getOutputData('counts', True)
         final_counts = data[-1]
-        import ipdb;
-        ipdb.set_trace()
 
         # TODO -- post processing to get effective rates
 
+        molecules = {}
+        for index, name in enumerate(self.parameters['species'].keys(), 1):
+            molecules[name] = final_counts[index] - states['molecules'][name]
+
+        import ipdb; ipdb.set_trace()
+
         return {
-            'molecules': {},
+            'molecules': molecules,
             'effective_rates': {},
         }
 
@@ -120,7 +140,7 @@ def test_smoldyn_process(
     parameters = {
         'animate': animate,
         'species': {
-            'X': {'difc': 0, 'color': 'green', 'display_size': 3, 'solution': {'counts': 1, 'position': [5, 5]}},
+            'X': {'difc': 0, 'color': 'green', 'display_size': 3},
             'A': {'difc': 1, 'color': 'red', 'display_size': 3},
             'B': {'difc': 1, 'color': 'blue', 'display_size': 3},
             'A2': {'difc': 1, 'color': 'red', 'display_size': 5},
@@ -137,16 +157,17 @@ def test_smoldyn_process(
             'Bdegrade': {'subs': ['B'], 'prds': [], 'rate': 1},
         },
     }
+
+    import ipdb; ipdb.set_trace()
+
     template_process = SmoldynProcess(parameters)
+
 
     # declare the initial state
     initial_state = {
-        'internal': {
-            'A': 0.0
-        },
-        'external': {
-            'A': 1.0
-        },
+        'molecules': {
+            'X': 10
+        }
     }
 
     # run the simulation
