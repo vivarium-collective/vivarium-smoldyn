@@ -22,6 +22,8 @@ class Smoldyn(Process):
     A spatial stochastic simulator for chemical reaction networks
 
     http://www.smoldyn.org/index.html
+
+    TODO: suppress print out
     """
 
     defaults = {
@@ -120,10 +122,9 @@ class Smoldyn(Process):
         final_counts = data[-1]
         molecules = {}
         for index, name in enumerate(self.parameters['species'].keys(), 1):
-            molecules[name] = final_counts[index] - states['molecules'][name]
+            molecules[name] = int(final_counts[index]) - states['molecules'][name]
 
         # TODO -- post processing to get effective rates
-
 
         return {
             'molecules': molecules,
