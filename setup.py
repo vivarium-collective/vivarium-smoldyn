@@ -15,8 +15,8 @@ setup(
         'vivarium_smoldyn.composites',
         'vivarium_smoldyn.experiments',
     ],
-    author='Eran Agmon',
-    author_email='eagmon@stanford.edu',
+    author='Eran Agmon, Steve Andrews, Ryan Spangler',
+    author_email='eagmon@stanford.edu, steven.s.andrews@gmail.com, ryan.spangler@gmail.com',
     url='https://github.com/vivarium-collective/vivarium-smoldyn',
     license='MIT',
     entry_points={

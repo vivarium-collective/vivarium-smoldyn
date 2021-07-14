@@ -1,5 +1,7 @@
 """
+=======
 Smoldyn
+=======
 
 Execute by running: ``python vivarium_smoldyn/processes/smoldyn_process.py``
 """
@@ -24,6 +26,7 @@ class Smoldyn(Process):
     http://www.smoldyn.org/index.html
 
     TODO: suppress print out
+    TODO: configure surfaces
     """
 
     defaults = {
@@ -35,6 +38,7 @@ class Smoldyn(Process):
         'dt': 0.1,
         'species': {},
         'reactions': {},
+        'file': None,
     }
 
     def __init__(self, parameters=None):
@@ -43,34 +47,49 @@ class Smoldyn(Process):
         self.dt = self.parameters['dt']
 
         # initialize the simulation
-        self.simulation = sm.Simulation(
-            low=self.parameters['low'],
-            high=self.parameters['high'],
-            types=self.parameters['boundary'],
-        )
+        if self.parameters['file']:
+            self.simulation = sm.Simulation.fromFile(self.parameters['file'], "q")
+        else:
+            self.simulation = sm.Simulation(
+                low=self.parameters['low'],
+                high=self.parameters['high'],
+                types=self.parameters['boundary'],
+                setFlags="q"
+            )
+
+        # set output type
         self.simulation.addOutputData('counts')
         self.simulation.addCommand(cmd='molcount counts', cmd_type='E')
 
         # make the species
-        self.species = {}
+        species = {}
         for name, config in self.parameters['species'].items():
-            print('species ' + name)
-            self.species[name] = self.simulation.addSpecies(name, **config)
+            species[name] = self.simulation.addSpecies(name, **config)
 
         # make the reactions
-        self.reactions = {}
         for rxn_name, config in self.parameters['reactions'].items():
             substrate_names = config.pop('subs')
             product_names = config.pop('prds')
-            substrates = [self.species[name] for name in substrate_names]
-            products = [self.species[name] for name in product_names]
-            self.reactions[rxn_name] = self.simulation.addReaction(
+            substrates = [species[name] for name in substrate_names]
+            products = [species[name] for name in product_names]
+            self.simulation.addReaction(
                 rxn_name,
                 subs=substrates,
                 prds=products,
                 **config)
 
-        # TODO -- configure surfaces
+        # get the species names
+        self.species = []
+        retrieving_species = True
+        index = 1
+        while retrieving_species:
+            # TODO: fix this so it does not have to throw an error
+            try:
+                species = self.simulation.getSpeciesName(index)
+                self.species.append(species)
+                index += 1
+            except:
+                retrieving_species = False
 
         if self.parameters['animate']:
             self.simulation.addGraphics('opengl')
@@ -90,7 +109,7 @@ class Smoldyn(Process):
                     '_default': 0,
                     '_updater': 'accumulate',
                     '_emit': True,
-                } for mol_id in self.parameters['species'].keys()
+                } for mol_id in self.species
             },
             # TODO -- effective rates (as a result of crowding). could be optional
             'effective_rates': {}
@@ -148,7 +167,8 @@ def test_smoldyn_process(
         'reactions': {
             'express': {
                 'subs': ['X'],
-                'prds': ['X', 'A', 'B'],
+                'prds': [
+                    'X', 'A', 'B'],
                 'rate': 1},
             'Adimer': {
                 'subs': ['A', 'A'],
@@ -197,19 +217,17 @@ def test_smoldyn_process(
     return output
 
 
-def main():
-    out_dir = os.path.join(PROCESS_OUT_DIR, 'smoldyn')
-    os.makedirs(out_dir, exist_ok=True)
+def test_load_file():
+    parameters = {
+        'file': 'vivarium_smoldyn/examples/template.txt'
+    }
+    smoldyn = Smoldyn(parameters)
 
-    output = test_smoldyn_process(animate=False)
+    import ipdb; ipdb.set_trace()
 
-    # plot the simulation output
-    plot_settings = {}
-    plot_simulation_output(
-        output,
-        plot_settings,
-        out_dir)
+
 
 
 if __name__ == '__main__':
-    main()
+    test_smoldyn_process()
+    # test_load_file()
