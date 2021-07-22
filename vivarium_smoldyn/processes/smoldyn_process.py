@@ -38,6 +38,7 @@ class Smoldyn(Process):
         'dt': 0.1,
         'species': {},
         'reactions': {},
+        # TODO: add parameters for defining compartments and surfaces
         'file': None,
     }
 
@@ -61,10 +62,18 @@ class Smoldyn(Process):
         self.simulation.addOutputData('counts')
         self.simulation.addCommand(cmd='molcount counts', cmd_type='E')
 
+        # get the species names
+        species_count = self.simulation.count()['species']
+        self.species = []
+        for index in range(species_count):
+            species_name = self.simulation.getSpeciesName(index)
+            self.species.append(species_name)
+
         # make the species
         species = {}
         for name, config in self.parameters['species'].items():
             species[name] = self.simulation.addSpecies(name, **config)
+            self.species.append(name)
 
         # make the reactions
         for rxn_name, config in self.parameters['reactions'].items():
@@ -78,25 +87,26 @@ class Smoldyn(Process):
                 prds=products,
                 **config)
 
-        # get the species names
-        self.species = []
-        retrieving_species = True
-        index = 1
-        while retrieving_species:
-            # TODO: fix this so it does not have to throw an error
-            try:
-                species = self.simulation.getSpeciesName(index)
-                self.species.append(species)
-                index += 1
-            except:
-                retrieving_species = False
-
         if self.parameters['animate']:
             self.simulation.addGraphics('opengl')
 
+    # TODO: make this work with compartments
+    def set_compartment(self, name, config):
+        self.simulation.runCommand(f'killmol {name}')
+        self.simulation.addCompartmentMolecules(
+            config.get('compartment'),
+            name,
+            config.get('counts'),
+            highpos=config.get('high'),
+            lowpos=config.get('low'))
+
+    # TODO: provide another function for adding surfaces
+    # def set_surface(.......) ?
+
     def set_uniform(self, name, config):
         self.simulation.runCommand(f'killmol {name}')
-        self.species[name].addToSolution(
+        self.simulation.addSolutionMolecules(
+            name,
             config.get('counts'),
             highpos=config.get('high'),
             lowpos=config.get('low'))
@@ -110,9 +120,7 @@ class Smoldyn(Process):
                     '_updater': 'accumulate',
                     '_emit': True,
                 } for mol_id in self.species
-            },
-            # TODO -- effective rates (as a result of crowding). could be optional
-            'effective_rates': {}
+            }
         }
 
     def next_update(
@@ -123,11 +131,10 @@ class Smoldyn(Process):
 
         # reset the molecules, at a uniform distribution
         for name, counts in states['molecules'].items():
-            self.set_uniform(
-                name, {
-                    'counts': counts,
-                    'high': self.parameters['high'],
-                    'low': self.parameters['low']})
+            self.set_uniform(name, {
+                'counts': counts,
+                'high': self.parameters['high'],
+                'low': self.parameters['low']})
 
         # run simulation
         self.simulation.run(
@@ -222,12 +229,26 @@ def test_load_file():
         'file': 'vivarium_smoldyn/examples/template.txt'
     }
     smoldyn = Smoldyn(parameters)
+    
+    # declare the initial state
+    initial_state = {
+        'molecules': {
+            'E': 10,
+            'S': 1000}}
+
+    # run the simulation
+    sim_settings = {
+        'total_time': 100,
+        'initial_state': initial_state}
+
+    output = simulate_process(
+        smoldyn,
+        sim_settings)
 
     import ipdb; ipdb.set_trace()
 
 
 
-
 if __name__ == '__main__':
-    test_smoldyn_process()
-    # test_load_file()
+    # test_smoldyn_process()
+    test_load_file()

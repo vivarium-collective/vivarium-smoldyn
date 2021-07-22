@@ -19,8 +19,8 @@ define K_PROD 1			# complex reaction rate to product
 define TEXTOUTPUT		# uncomment this line for text output
 
 # Graphical output
-graphics opengl_good		# level of graphics quality (or none)
-frame_thickness 0		# turns off display of the system boundaries
+# graphics opengl_good		# level of graphics quality (or none)
+# frame_thickness 0		# turns off display of the system boundaries
 
 # System space and time definitions
 dim 2				# 2D system
@@ -68,10 +68,10 @@ surface_mol 100 E(front) membrane all all	# puts 100 E molecules on surface
 
 # Output and other run-time commands
 text_display time S E(front) ES(front) P	# displays species counts to graphics
-ifdefine TEXTOUTPUT				# only run this if needed
-  output_files templateout.txt			# file names for text output
-  cmd B molcountheader templateout.txt		# text output run at beginning
-  cmd N 10 molcount templateout.txt		# text output run every 10 time steps
-endif
+# ifdefine TEXTOUTPUT				# only run this if needed
+#   output_files templateout.txt			# file names for text output
+#   cmd B molcountheader templateout.txt		# text output run at beginning
+#   cmd N 10 molcount templateout.txt		# text output run every 10 time steps
+# endif
 
 end_file			# end of this file
